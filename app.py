@@ -5,8 +5,15 @@ from langchain_community.tools import ArxivQueryRun, WikipediaQueryRun, DuckDuck
 from langchain.agents import create_react_agent, AgentExecutor
 from langchain import hub
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
+import wikipedia
 import os
 from dotenv import load_dotenv
+
+## Set Wikipedia timeout
+wikipedia.set_rate_limiting(True)
+wikipedia.set_lang("en")
+import wikipedia as wiki_module
+wiki_module.TIMEOUT = 10
 
 ## Arxiv and Wikipedia Tools
 arxiv_wrapper = ArxivAPIWrapper(top_k_results=1, doc_content_chars_max=200)
@@ -48,9 +55,12 @@ if prompt := st.chat_input(placeholder="What is machine learning?"):
 
     with st.chat_message("assistant"):
         st_cb = StreamlitCallbackHandler(st.container(), expand_new_thoughts=False)
-        response = agent_executor.invoke(
-            {"input": prompt},
-            config={"callbacks": [st_cb]}
-        )["output"]
+        try:
+            response = agent_executor.invoke(
+                {"input": prompt},
+                config={"callbacks": [st_cb]}
+            )["output"]
+        except Exception as e:
+            response = f"Sorry, I ran into an error: {str(e)}\n\nPlease try again."
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.write(response)
